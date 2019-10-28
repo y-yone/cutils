@@ -8,7 +8,8 @@
 #include "hash/hash.h"
 
 
-static unsigned int default_hash_calc(void *data, unsigned int len)
+static unsigned int default_hash_calc(void *data, unsigned int len,
+    void *user_ctx)
 {
     unsigned int i;
     unsigned int hash_value = 0;
@@ -95,18 +96,18 @@ void hash_free(hash_t *hash)
 }
 
 
-int hash_add(hash_t *hash, void *hash_data, unsigned int len, void *user_ctx)
+hash_elem_t *hash_add(hash_t *hash, void *hash_data, unsigned int len, void *user_ctx)
 {
     int ret;
     unsigned int hvalue, ihash;
     hash_elem_t *helem;
     dlist_t *head;
 
-    hvalue = hash->hash_calc(hash_data, len);
+    hvalue = hash->hash_calc(hash_data, len, user_ctx);
 
     helem = malloc(sizeof(hash_elem_t) + hash->user_size);
     if (helem == NULL) {
-        return -ENOMEM;
+        return NULL;
     }
 
     dlist_init(&helem->list);
@@ -118,7 +119,7 @@ int hash_add(hash_t *hash, void *hash_data, unsigned int len, void *user_ctx)
         ret = hash->hash_user(user_ctx, helem->user_data);
         if (ret != 0) {
             free(helem);
-            return ret;
+            return NULL;
         }
     }
 
@@ -126,7 +127,7 @@ int hash_add(hash_t *hash, void *hash_data, unsigned int len, void *user_ctx)
     head = &hash->hash_strage[ihash];
     dlist_link_tail(head, &helem->list);
 
-    return 0;
+    return helem;
 }
 
 
@@ -143,22 +144,21 @@ void hash_del(hash_t *hash, hash_elem_t *hash_elem)
 }
 
 
-void hash_unlink(hash_t *hash, hash_elem_t *hash_elem)
+void hash_unlink(hash_elem_t *hash_elem)
 {
     dlist_unlink(&hash_elem->list);
     return;
 }
 
 
-
-
-void *hash_search(hash_t *hash, void *hash_data, unsigned int len)
+hash_elem_t *hash_search(hash_t *hash, void *hash_data, unsigned int len,
+    void *search_ctx)
 {
     unsigned int vhash, ihash;
     dlist_t *head;
     hash_elem_t *elem;
 
-    vhash = hash->hash_calc(hash_data, len);
+    vhash = hash->hash_calc(hash_data, len, search_ctx);
     ihash = vhash % hash->hash_size;
     head = &hash->hash_strage[ihash];
     elem = (hash_elem_t*)dlist_link_next(head);
@@ -180,5 +180,5 @@ void *hash_search(hash_t *hash, void *hash_data, unsigned int len)
         return NULL;
     }
 
-    return elem->hash_data;
+    return elem;
 }
