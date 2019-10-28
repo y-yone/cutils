@@ -24,13 +24,13 @@ static unsigned int default_hash_calc(void *data, unsigned int len)
 
 
 static int default_hash_match(void *comp_data, void *hash_data,
-    unsigned int len)
+    unsigned int len, void *user_data)
 {
     return memcmp(comp_data, hash_data, len) == 0;
 }
 
 
-hash_t *hash_new(unsigned int hash_size)
+hash_t *hash_new(unsigned int hash_size, unsigned int user_size)
 {
     hash_t *hash;
     int msize;
@@ -41,7 +41,7 @@ hash_t *hash_new(unsigned int hash_size)
         return NULL;
     }
 
-    msize = sizeof(hash_t) + (sizeof(dlist_t)*(hash_size-1));
+    msize = sizeof(hash_t) + (sizeof(dlist_t)*(hash_size));
     hash = malloc(msize);
     if (hash == NULL) {
         return NULL;
@@ -53,7 +53,8 @@ hash_t *hash_new(unsigned int hash_size)
     hash->hash_calc = default_hash_calc;
     hash->hash_free = NULL;
     hash->hash_match = default_hash_match;
-    
+    hash->hash_user = NULL;
+    hash->user_size = user_size;
 
     for (i = 0; i < hash_size; i++) {
         hlist = &hash->hash_strage[i];
@@ -82,7 +83,7 @@ void hash_free(hash_t *hash)
             }
 
             if (hash->hash_free != NULL) {
-                hash->hash_free(helem->hash_data);
+                hash->hash_free(helem->hash_data, helem->user_data);
             }
 
             dlist_unlink(&helem->list);
@@ -94,15 +95,16 @@ void hash_free(hash_t *hash)
 }
 
 
-int hash_add(hash_t *hash, void *hash_data, unsigned int len)
+int hash_add(hash_t *hash, void *hash_data, unsigned int len, void *user_ctx)
 {
+    int ret;
     unsigned int hvalue, ihash;
     hash_elem_t *helem;
     dlist_t *head;
 
     hvalue = hash->hash_calc(hash_data, len);
 
-    helem = malloc(sizeof(hash_elem_t));
+    helem = malloc(sizeof(hash_elem_t) + hash->user_size);
     if (helem == NULL) {
         return -ENOMEM;
     }
@@ -111,6 +113,14 @@ int hash_add(hash_t *hash, void *hash_data, unsigned int len)
     helem->hash_value = hvalue;
     helem->hash_data = hash_data;
     helem->hash_len = len;
+
+    if (hash->hash_user != NULL) {
+        ret = hash->hash_user(user_ctx, helem->user_data);
+        if (ret != 0) {
+            free(helem);
+            return ret;
+        }
+    }
 
     ihash = hvalue % hash->hash_size;
     head = &hash->hash_strage[ihash];
@@ -125,12 +135,21 @@ void hash_del(hash_t *hash, hash_elem_t *hash_elem)
     dlist_unlink(&hash_elem->list);
 
     if (hash->hash_free != NULL) {
-        hash->hash_free(hash_elem->hash_data);
+        hash->hash_free(hash_elem->hash_data, hash_elem->user_data);
     }
             
     free(hash_elem);
     return;
 }
+
+
+void hash_unlink(hash_t *hash, hash_elem_t *hash_elem)
+{
+    dlist_unlink(&hash_elem->list);
+    return;
+}
+
+
 
 
 void *hash_search(hash_t *hash, void *hash_data, unsigned int len)
@@ -147,7 +166,8 @@ void *hash_search(hash_t *hash, void *hash_data, unsigned int len)
     while ((void*)elem != (void*)head) {
         if (elem->hash_value == vhash) {
             if (elem->hash_len == len
-                && hash->hash_match(hash_data, elem->hash_data, len))
+                && hash->hash_match(hash_data, elem->hash_data, len,
+                                    elem->user_data))
             {
                 break;
             }
