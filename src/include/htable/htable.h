@@ -2,6 +2,9 @@
  * simple hash struct
  */
 
+#ifndef _CUTILS_HTABLE_
+#define _CUTILS_HTABLE_
+
 #include "list/dlist.h"
 
 typedef struct _htalbe_elem_t htable_elem_t;
@@ -41,3 +44,5 @@ void htable_del(htable_t *htable, htable_elem_t *htable_elem);
 void htable_unlink(htable_elem_t *htable_elem);
 htable_elem_t *htable_search(htable_t *htable, void *htable_data, unsigned int len,
     void *search_ctx);
+
+#endif

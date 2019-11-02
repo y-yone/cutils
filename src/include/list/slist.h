@@ -2,6 +2,9 @@
  * singly-linked struct
  */
 
+#ifndef _CUTILS_SLIST_
+#define _CUTILS_SLIST_
+
 typedef struct _slink_list {
     struct _slink_list *next;
 } slist_t;
@@ -11,3 +14,4 @@ typedef struct _slink_list {
 void slist_link_insert(slist_t *insrt, slist_t *elem);
 slist_t *slist_link_pop(slist_t *head);
 
+#endif
