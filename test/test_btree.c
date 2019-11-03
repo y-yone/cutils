@@ -19,12 +19,12 @@ void tree_free(void *udata)
 
 int tree_build(void *uctx, void *udata)
 {
-    int *usr, *ctx;
+    int *usr, *build;
 
-    usr = udata;
-    ctx = uctx;
+    usr = uctx;
+    build = udata;
 
-    *usr = *ctx;
+    *usr = *build;
     return 0;
 }
 
@@ -51,6 +51,18 @@ int main(int argc, char *argv[])
     elem = btree_add(root, &b);
 
     elem = btree_search(root, &a);
+    if (elem != NULL) {
+        printf("elem data %d\n", *(int*)elem->user_data);
+    }
+
+    btree_del(root, elem);
+    
+    elem = btree_search(root, &a);
+    if (elem == NULL) {
+        printf("elem data not found\n");
+    }
+
+    elem = btree_search(root, &b);
     if (elem != NULL) {
         printf("elem data %d\n", *(int*)elem->user_data);
     }

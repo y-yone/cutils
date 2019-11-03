@@ -190,7 +190,7 @@ btree_elem_t *btree_search(btree_root_t *root, void *search_data)
     compare = root->tree_compare;
 
     while (search_elem != NULL) {
-        comp = compare(search_elem, search_data);
+        comp = compare(search_elem->user_data, search_data);
 
         if (comp == 0) {
             return search_elem;
