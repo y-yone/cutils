@@ -67,5 +67,7 @@ int main(int argc, char *argv[])
         printf("elem data %d\n", *(int*)elem->user_data);
     }
 
+    btree_del(root, elem);
+
     return 0;
 }

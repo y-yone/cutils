@@ -1,5 +1,5 @@
 /*
- * simple tree struct
+ * simple binary tree struct
  */
 
 #include <stdlib.h>
@@ -101,11 +101,19 @@ void btree_del(btree_root_t *root, btree_elem_t *telem)
 
     parent = telem->parent;
     telem->parent = NULL;
+    new_node = NULL;
 
     if (telem->node.left != NULL) {
         left_d0 = telem->node.left;
 
         right = left_d0->node.right;
+        while (right != NULL) {
+            if (right->node.right == NULL) {
+                break;
+            }
+            right = right->node.right;
+        }
+
         if (right == NULL) {
             /* left_d0 is new node */
             new_node = left_d0;
@@ -126,10 +134,6 @@ void btree_del(btree_root_t *root, btree_elem_t *telem)
             }
             
         } else {
-            while (right->node.right == NULL) {
-                right = right->node.right;
-            }
-
             if (right->node.left) {
                 right->parent->node.right = right->node.left;
                 right->node.left->parent = right->parent;
@@ -170,6 +174,18 @@ void btree_del(btree_root_t *root, btree_elem_t *telem)
             }
         } else {
             root->root_node = new_node;
+        }
+    } else {
+        /* delete last element */
+        root->root_node = NULL;
+    }
+
+    if (new_node != NULL) {
+        if (new_node->node.left != NULL) {
+            new_node->node.left->parent = new_node;
+        }
+        if (new_node->node.right != NULL) {
+            new_node->node.right->parent = new_node;
         }
     }
 
