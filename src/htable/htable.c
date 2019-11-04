@@ -1,26 +1,18 @@
 /*
- * simple hash struct
+ * simple hash table struct
  */
 
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "hash/hash.h"
 #include "htable/htable.h"
 
 
 static unsigned int default_htable_calc(void *data, unsigned int len,
     void *user_ctx)
 {
-    unsigned int i;
-    unsigned int hash_value = 0;
-
-    // temporary
-    for (i = 0; i < len; i++) {
-        hash_value *= 10;
-        hash_value += *((unsigned char*)(data)+1);
-    }
-
-    return hash_value;
+    return hashing_data(data, len);
 }
 
 
