@@ -8,6 +8,7 @@
 
 
 enum ROTATE_SIDE {
+    NONE,
     RIGHT,
     LEFT
 };
@@ -47,22 +48,29 @@ static void rotate_right(bbtree_root_t *root, bbtree_elem_t *node)
     right = node->node.right;
     left = node->node.left;
 
-    while (left != NULL) {
-        new_root = left;
-        left = right->node.right;
+    /* can not rotate */
+    if (left == NULL) {
+        return;
     }
 
-    /* can not rotate */
-    if (new_root == NULL) {
-        return;
+    /* search most right node in left tree */
+    new_root = left;
+    while (left != NULL) {
+        new_root = left;
+        left = left->node.right;
     }
 
     parent = new_root->parent;
     if (new_root->node.left != NULL) {
         left = new_root->node.left;
-        left->parent = parent;
         if (parent != NULL) {
-            parent->node.right = left;
+            if (parent == node) {
+                parent->node.left = right;
+                left->parent = new_root;
+            } else {
+                parent->node.right = left;
+                left->parent = parent;
+            }
         }
 
         new_root->node.left = NULL;
@@ -70,7 +78,7 @@ static void rotate_right(bbtree_root_t *root, bbtree_elem_t *node)
         new_root->child_num = 0;
     }
 
-    while (parent != NULL && parent != new_root) {
+    while (parent != NULL && parent != old_root) {
         parent->child_num--;
         parent = parent->parent;
     }
@@ -79,6 +87,12 @@ static void rotate_right(bbtree_root_t *root, bbtree_elem_t *node)
     new_root->child_num = old_root->child_num;
     new_root->parent = old_root->parent;
     new_root->node = old_root->node;
+    if (new_root->node.left != NULL) {
+        new_root->node.left->parent = new_root;
+    }
+    if (new_root->node.right != NULL) {
+        new_root->node.right->parent = new_root;
+    }
 
     parent = old_root->parent;
     if (parent != NULL) {
@@ -104,7 +118,11 @@ static void rotate_right(bbtree_root_t *root, bbtree_elem_t *node)
         left = left->node.left;
     }
 
-    add_elem->node.left = old_root;
+    if (add_elem == new_root) {
+        add_elem->node.right = old_root;
+    } else {
+        add_elem->node.left = old_root;
+    }
     old_root->parent = add_elem;
 
     parent = add_elem;
@@ -125,22 +143,31 @@ static void rotate_left(bbtree_root_t *root, bbtree_elem_t *node)
     right = node->node.right;
     left = node->node.left;
 
+    /* can not rotate */
+    if (right == NULL) {
+        return;
+    }
+
+    /* search most left node in right tree */
+    new_root = right;
     while (right != NULL) {
         new_root = right;
         right = right->node.left;
     }
 
-    /* can not rotate */
-    if (new_root == NULL) {
-        return;
-    }
-
     parent = new_root->parent;
     if (new_root->node.right != NULL) {
         right = new_root->node.right;
-        right->parent = parent;
+
         if (parent != NULL) {
-            parent->node.left = right;
+            if (parent == node) {
+                parent->node.right = right;
+
+            } else {
+                parent->node.left = right;
+            }
+
+            right->parent = parent;
         }
 
         new_root->node.right = NULL;
@@ -148,7 +175,7 @@ static void rotate_left(bbtree_root_t *root, bbtree_elem_t *node)
         new_root->child_num = 0;
     }
 
-    while (parent != NULL && parent != new_root) {
+    while (parent != NULL && parent != old_root) {
         parent->child_num--;
         parent = parent->parent;
     }
@@ -157,13 +184,19 @@ static void rotate_left(bbtree_root_t *root, bbtree_elem_t *node)
     new_root->child_num = old_root->child_num;
     new_root->parent = old_root->parent;
     new_root->node = old_root->node;
+    if (new_root->node.left != NULL) {
+        new_root->node.left->parent = new_root;
+    }
+    if (new_root->node.right != NULL) {
+        new_root->node.right->parent = new_root;
+    }
 
     parent = old_root->parent;
     if (parent != NULL) {
-        if (parent->node.left == old_root) {
-            parent->node.left = new_root;
-        } else {
+        if (parent->node.right == old_root) {
             parent->node.right = new_root;
+        } else {
+            parent->node.left = new_root;
         }
     } else {
         root->root_node = new_root;
@@ -174,7 +207,7 @@ static void rotate_left(bbtree_root_t *root, bbtree_elem_t *node)
     old_root->node.right = NULL;
     old_root->node.left = NULL;
 
-    /* add old root to left node most right position */
+    /* add old root to right node most left position */
     add_elem = new_root;
     right = left;
     while (right != NULL) {
@@ -182,7 +215,11 @@ static void rotate_left(bbtree_root_t *root, bbtree_elem_t *node)
         right = right->node.right;
     }
 
-    add_elem->node.right = old_root;
+    if (add_elem == new_root) {
+        add_elem->node.left = old_root;
+    } else {
+        add_elem->node.right = old_root;
+    }
     old_root->parent = add_elem;
 
     parent = add_elem;
@@ -196,6 +233,10 @@ static void rotate_left(bbtree_root_t *root, bbtree_elem_t *node)
 static void rotate_tree(bbtree_root_t *root, bbtree_elem_t *node,
     enum ROTATE_SIDE rotate)
 {
+    if (rotate == NONE) {
+        return;
+    }
+
     if (rotate == RIGHT) {
         rotate_right(root, node);
     } else {
@@ -206,13 +247,16 @@ static void rotate_tree(bbtree_root_t *root, bbtree_elem_t *node,
 }
 
 
-static void rebalancing_tree(bbtree_root_t *root)
+static void rebalancing_tree(bbtree_root_t *root, bbtree_elem_t *balanced_elem)
 {
-    bbtree_elem_t *balance_root, *right, *left;
+    bbtree_elem_t *balance_root, *last_root, *right, *left;
     unsigned int right_child, left_child, child_diff;
-    enum ROTATE_SIDE rotate;
+    enum ROTATE_SIDE rotate, last_rotate;
 
-    balance_root = root->root_node;
+    rotate = NONE;
+    balance_root = balanced_elem->parent;
+    last_root = NULL;
+    last_rotate = NONE;
 
     for (;;) {
         right_child = 0;
@@ -231,7 +275,8 @@ static void rebalancing_tree(bbtree_root_t *root)
         }
 
         if (right_child == left_child) {
-            break;
+            balance_root = balance_root->parent;
+            continue;
         }
 
         if (right_child > left_child) {
@@ -243,16 +288,14 @@ static void rebalancing_tree(bbtree_root_t *root)
         }
 
         if (child_diff >= 2) {
-            rotate_tree(root, balance_root, rotate);
-            break;
+            last_root = balance_root;
+            last_rotate = rotate;
         }
 
-        if (rotate == RIGHT) {
-            balance_root = balance_root->node.left;
-        } else {
-            balance_root = balance_root->node.right;
-        }
+        balance_root = balance_root->parent;
     }
+
+    rotate_tree(root, last_root, last_rotate);
 
     return;
 }
@@ -337,7 +380,7 @@ bbtree_elem_t *bbtree_add(bbtree_root_t *root, void *add_data)
     }
 
     insert_element(root, add_elem);
-    rebalancing_tree(root);
+    rebalancing_tree(root, add_elem);
 
     return add_elem;
 }
