@@ -37,7 +37,7 @@ bbtree_root_t *bbtree_new(unsigned int user_size,
 }
 
 
-static void rotate_right(bbtree_elem_t *node)
+static void rotate_right(bbtree_root_t *root, bbtree_elem_t *node)
 {
     bbtree_elem_t *new_root, *old_root;
     bbtree_elem_t *left, *right, *add_elem, *parent;
@@ -80,6 +80,17 @@ static void rotate_right(bbtree_elem_t *node)
     new_root->parent = old_root->parent;
     new_root->node = old_root->node;
 
+    parent = old_root->parent;
+    if (parent != NULL) {
+        if (parent->node.left == old_root) {
+            parent->node.left = new_root;
+        } else {
+            parent->node.right = new_root;
+        }
+    } else {
+        root->root_node = new_root;
+    }
+    
     old_root->child_num = 0;
     old_root->parent = NULL;
     old_root->node.right = NULL;
@@ -104,7 +115,7 @@ static void rotate_right(bbtree_elem_t *node)
 }
 
 
-static void rotate_left(bbtree_elem_t *node)
+static void rotate_left(bbtree_root_t *root, bbtree_elem_t *node)
 {
     bbtree_elem_t *new_root, *old_root;
     bbtree_elem_t *left, *right, *add_elem, *parent;
@@ -147,6 +158,17 @@ static void rotate_left(bbtree_elem_t *node)
     new_root->parent = old_root->parent;
     new_root->node = old_root->node;
 
+    parent = old_root->parent;
+    if (parent != NULL) {
+        if (parent->node.left == old_root) {
+            parent->node.left = new_root;
+        } else {
+            parent->node.right = new_root;
+        }
+    } else {
+        root->root_node = new_root;
+    }
+    
     old_root->child_num = 0;
     old_root->parent = NULL;
     old_root->node.right = NULL;
@@ -171,12 +193,13 @@ static void rotate_left(bbtree_elem_t *node)
 }
 
 
-static void rotate_tree(bbtree_elem_t *node, enum ROTATE_SIDE rotate)
+static void rotate_tree(bbtree_root_t *root, bbtree_elem_t *node,
+    enum ROTATE_SIDE rotate)
 {
     if (rotate == RIGHT) {
-        rotate_right(node);
+        rotate_right(root, node);
     } else {
-        rotate_left(node);
+        rotate_left(root, node);
     }
 
     return;
@@ -200,11 +223,11 @@ static void rebalancing_tree(bbtree_root_t *root)
         }
 
         if (balance_root->node.right != NULL) {
-            right_child = balance_root->node.right->child_num;
+            right_child = balance_root->node.right->child_num + 1;
         }
 
         if (balance_root->node.left != NULL) {
-            left_child = balance_root->node.left->child_num;
+            left_child = balance_root->node.left->child_num + 1;
         }
 
         if (right_child == left_child) {
@@ -220,7 +243,7 @@ static void rebalancing_tree(bbtree_root_t *root)
         }
 
         if (child_diff >= 2) {
-            rotate_tree(balance_root, rotate);
+            rotate_tree(root, balance_root, rotate);
             break;
         }
 
